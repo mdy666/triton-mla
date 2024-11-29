@@ -1,0 +1,2 @@
+{"triton_mla": {"bs:8\nin:64\nout:64": 6.948, "bs:8\nin:256\nout:256": 20.147, "bs:8\nin:512\nout:512": 48.051, "bs:4\nin:1024\nout:512": 81.132}}
+{"torch_mla": {"bs:8\nin:64\nout:64": 5.131, "bs:8\nin:256\nout:256": 29.149, "bs:8\nin:512\nout:512": 92.798, "bs:4\nin:1024\nout:512": 157.313}}
