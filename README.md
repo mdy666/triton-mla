@@ -102,7 +102,7 @@ bf16下    torch.allclose(a, b, 0.005, 0.005)    在0.005左右基本为True
 
 # 5 融合细节
 ## 5.1 $W_QW_K$融合
-的融合如下。注意权重都是单个头的映射权重，即shape都是[hidden_size, head_dim]
+注意权重都是单个头的映射权重，即shape都是[hidden_size, head_dim]
 $$
 \begin{aligned}
 QK^T &= xW_Q(xW_K)^T\\
@@ -112,7 +112,7 @@ QK^T &= xW_Q(xW_K)^T\\
 $$
 因此代码中的qk_merge对应的就是$x(W_QW_K^T)$。\
 补充一下，为什么nope的可以融合，rope的无法融合呢？\
-事实上如果带rope的话，score算的是$rope(xW_Q)rope(xW_K)^T$。这样是无法拆开的，因此至于nope的权重可以融合。
+事实上如果带rope的话，score算的是$rope(xW_Q)rope(xW_K)^T$。这样是无法拆开的，因此只有nope的权重可以融合。
 ## 5.2 $W_VW_O$融合
 论文中还提到了在推理时候$W_VW_O$也是可以融合的。但我发现这样做并不好。可能是我笨，融合的方式不对，欢迎大家探讨。理由如下
 $$
@@ -141,7 +141,7 @@ $W_{v_i}W_{o_i}$ 的shape就是[kv_lora_rank, v_head_dim\*num_head] \
 \
 另L = math.ceil(N / BLOCK_n), 前者和后者的flops分别为:
 $$2 * L * (BLOCK\_M * BLOCK\_N * v\_head\_dim + BLOCK\_N * kv\_lora\_rank * v\_head\_dim)$$
-$$2 * (L * (BLOCK\_M * BLOCK\_N * kv\_lora\_rank) + BLOCK\_M * kv\_lora\_rank * v\_head\_dim)$$\
+$$2 * (L * (BLOCK\_M * BLOCK\_N * kv\_lora\_rank) + BLOCK\_M * kv\_lora\_rank * v\_head\_dim)$$
 推理解码的时候，BLOCK_M设置为16，BLOCK_N设置为128, v_head_dim=64, kv_lora_rank=256, 计算复杂度关系曲线如下:\
 \
 ![Local Image](./img/pre_post.png#pic_center)\
