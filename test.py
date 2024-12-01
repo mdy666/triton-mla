@@ -3,7 +3,7 @@ torch.cuda.empty_cache()
 import modeling_minicpm
 from transformers import AutoConfig, AutoTokenizer, LlamaModel
 
-from custom import *
+from mla_attention import *
 
 import time
 import pandas as pd
@@ -95,6 +95,8 @@ def speed():
         if length > 1000:
             bs = 4
         output_tokens = min(length, 512)
+        # if config.eager_idx<1 and length > 512:
+        #     break
         input_ids = torch.randint(10000, 20000, (bs, length)).to(device)
         mask = torch.ones_like(input_ids)
         key = f'bs={bs} in={length} out={output_tokens}'
@@ -119,7 +121,7 @@ def generate():
 
     config = AutoConfig.from_pretrained(path, trust_remote_code=True)
     config._attn_implementation = 'eager'
-    config.eager_idx = 1
+    config.eager_idx = 2
     config.torch_dtype = torch.float16
 
     tokenizer = AutoTokenizer.from_pretrained(path, trust_remote_code=True)
@@ -135,7 +137,6 @@ def generate():
         if isinstance(m, MiniCPMTrain2Test):
             m.train2test()
     print(custom_model)
-    p2 = custom_model.num_parameters()
 
     inputs = tokenizer(text, return_tensors='pt', padding='longest')
     inputs = {k:v.cuda() for k,v in inputs.items()}
@@ -147,7 +148,8 @@ def generate():
                                             max_new_tokens=max_new_tokens, temperature=0.7, top_p=0.95)
         time2 = time.time() - start
     ans = tokenizer.batch_decode(model_outputs, skip_special_tokens=True)
-    print(ans)
+    for i in ans:
+        print(i)
 
 if __name__ == '__main__':
     speed()

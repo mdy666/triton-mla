@@ -877,9 +877,9 @@ class MiniCPMSdpaAttention(MiniCPMAttention):
 
         return attn_output, None, past_key_value
 
-from custom import CustomMiniCPMAttention, TritonMLAMiniCPMAttention
+from mla_attention import TorchMLAMiniCPMAttention, TritonMLAMiniCPMAttention
 MINICPM_ATTENTION_CLASSES = {
-    "eager": [MiniCPMAttention, CustomMiniCPMAttention, TritonMLAMiniCPMAttention],
+    "eager": [MiniCPMAttention, TorchMLAMiniCPMAttention, TritonMLAMiniCPMAttention], # 新增修改
     "flash_attention_2": MiniCPMFlashAttention2,
     "sdpa": MiniCPMSdpaAttention,
 }
@@ -889,7 +889,7 @@ class MiniCPMDecoderLayer(nn.Module):
     def __init__(self, config: MiniCPM3Config, layer_idx: int):
         super().__init__()
         self.hidden_size = config.hidden_size
-        if config._attn_implementation == 'eager':
+        if config._attn_implementation == 'eager': # 新增修改
             self.self_attn = MINICPM_ATTENTION_CLASSES[config._attn_implementation][config.eager_idx](config=config, layer_idx=layer_idx)
         else:
             self.self_attn = MINICPM_ATTENTION_CLASSES[config._attn_implementation](config=config, layer_idx=layer_idx)
@@ -1179,8 +1179,8 @@ class MiniCPM3Model(MiniCPM3PreTrainedModel):
                 inputs_embeds,
                 past_key_values_length,
             )
-        elif self.config.eager_idx == 2:
-            if attention_mask.dim() == 2:
+        elif  hasattr(self.config, 'eager_idx') and self.config.eager_idx == 2: # 新增修改
+            if attention_mask.dim() == 2: # 只有第一次forward的时候需要变换，之后就不需要变了
                 attention_mask = attention_mask.shape[-1] - attention_mask.sum(-1)
         else:
             # 4d mask is passed through the layers

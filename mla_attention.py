@@ -41,7 +41,7 @@ class MiniCPMTrain2Test(nn.Module):
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
 
-class CustomMiniCPMAttention(MiniCPMAttention, MiniCPMTrain2Test):
+class TorchMLAMiniCPMAttention(MiniCPMAttention, MiniCPMTrain2Test):
     def forward(
         self,
         hidden_states: torch.Tensor,
