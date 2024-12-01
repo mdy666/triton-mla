@@ -129,19 +129,19 @@ $W_{v_i}$ 的shape是[kv_lora_rank, v_head_dim], $W_{o_i}$ 的shape是[v_head_di
 $W_{v_i}W_{o_i}$ 的shape就是[kv_lora_rank, v_head_dim\*num_head] \
 首先这个权重很大，没法一次性load进chip中，因此只能放在flash_attn算子外部 \
 然后这样做的话flash_attn中输出是o的shape是[bs, num_head, seq_len, kv_lora_rank]\
-乘上$W_{v_i}W_{o_i}$之后，需要在num_head这个维度进行加法，把这个维度消掉
+乘上$W_{v_i}W_{o_i}$之后，需要在num_head这个维度进行加法，把这个维度消掉\
 不如把$W_{v_i}$融进flash_attn中，输出o的shape是[bs, num_head, seq_len, v_head_dim]。\
 而v_head_dim要不kv_lora_rank小很多，减少store的开销。因此代码中并没有进行$W_VW_O$的融合。\
 \
 那我是如何做的呢？
 首先我并没有把$V_i = xW_{v_i}$直接算出来。而是$(\sum p_{ij}x_j)W_{v_i}$\
 区别就是先乘还是后乘。先乘的话(x是compress_kv)，需要对所有的x都乘上这个矩阵(len=kv_len)\
-后乘就是对中间结果o乘上这个矩阵(len=q_len)，在解码的时候q_len=1，远比kv_len小。\
+后乘就是对中间结果o乘上这个矩阵(len=q_len)，在解码的时候q_len=BLOCK_M=16，远比kv_len小。\
 前者求和里的shape是[q_len, v_head_dim]后者是[q_len, kv_lora_rank]。\
 \
 另L = math.ceil(N / BLOCK_n), 前者和后者的flops分别为:
 $$2 * L * (BLOCK\_M * BLOCK\_N * v\_head\_dim + BLOCK\_N * kv\_lora\_rank * v\_head\_dim)$$
-$$2 * (L * (BLOCK\_M * BLOCK\_N * kv\_lora\_rank) + BLOCK\_M * kv\_lora\_rank * v\_head\_dim)$$
+$$2 * (L * (BLOCK\_M * BLOCK\_N * kv\_lora\_rank) + BLOCK\_M * kv\_lora\_rank * v\_head\_dim)$$\
 推理解码的时候，BLOCK_M设置为16，BLOCK_N设置为128, v_head_dim=64, kv_lora_rank=256, 计算复杂度关系曲线如下:\
 \
 ![Local Image](./img/pre_post.png#pic_center)\
