@@ -74,7 +74,7 @@ for i in ans:
 6. triton_mla_pseudocode.py, 如果看不懂triton的代码没关系，我还写了一个纯torch版的伪代码
 
 # 2 huggingface上推理速度对比
-device 4080 12G，存在爆显存的问题。A800机器显卡有些问题，后续会更新成A800的结果。第一行波动比较大，均不是最优结果。
+device 4080 12G
 | setting      | TritonMLAMiniCPMAttention | TorchMLAMiniCPMAttention | MiniCPMAttention | MiniCPMFlashAttention2 | MiniCPMSdpaAttention |
 | -----------  | ----------- | ----------- | ----------- | ----------- | ----------- |
 | bs=8 in=64 out=64    |  5.443   | 5.637   |5.119   |7.37   | 4.87   |
@@ -83,16 +83,46 @@ device 4080 12G，存在爆显存的问题。A800机器显卡有些问题，后�
 | bs=4 in=1024 out=512 |  34.826  | 96.659  |nan     |nan    | nan    |
 | bs=4 in=2048 out=512 |  38.071  | 274.304 |nan     |nan    | nan    |
 
+device A800 80G 均无OOM情况下
+| setting      | TritonMLAMiniCPMAttention | TorchMLAMiniCPMAttention | MiniCPMAttention | MiniCPMFlashAttention2 | MiniCPMSdpaAttention |
+| -----------  | ----------- | ----------- | ----------- | ----------- | ----------- |
+| bs=16 in=64 out=64    |  7.125   | 6.982   |6.662   |7.251   | 6.730   |
+| bs=16 in=256 out=256  |  18.352  | 25.531  |18.751  |20.396 | 18.106  |
+| bs=16 in=512 out=512  |  36.891  | 87.403 |40.059 |43.759    | 38.850 |
+| bs=16 in=1024 out=512 |  37.165  | 133.095  |52.788    |53.553    | 52.560    |
+| bs=4 in=2048 out=512 |  37.365  | 68.032 |38.164     |40.537    | 36.150    |
+| bs=4 in=4096 out=512 |  39.806  | 68.032 |50.846     |46.691    | 48.433    |
+
+device A800 80G bs翻倍
+| setting      | TritonMLAMiniCPMAttention | TorchMLAMiniCPMAttention | MiniCPMAttention | MiniCPMFlashAttention2 | MiniCPMSdpaAttention |
+| -----------  | ----------- | ----------- | ----------- | ----------- | ----------- |
+| bs=32 in=64 out=64    |  7.35   | 6.96   |8.07   |8.03   | 6.46   |
+| bs=32 in=256 out=256  |  18.51  | 43.14  |21.15  |21.48 | 19.78  |
+| bs=32 in=512 out=512  |  36.70  | 158.33 |59.51 |66.62    | 61.20 |
+| bs=32 in=1024 out=512 |  38.59  | 249.71  |90.80    |93.14    | 91.16    |
+| bs=16 in=2048 out=512 |  39.122  | 226.95 |85.36     |84.80    | 83.21    |
+| bs=16 in=4096 out=512 |  60.751  | OOM |OOM     |OOM    | OOM    |
+| bs=8 in=8192 out=512 |  63.97  | OOM |OOM     |OOM    | OOM    |
+| bs=16 in=8192 out=512 |  OOM  | OOM |OOM     |OOM    | OOM    |
+
 # 3 triton benchmark性能对比
 kv_lora_rank=256 nope_head_dim=64 rope_head_dim=32\
-bs=1 num_head=32 q_len=1 decode阶段\
+4080 bs=1 num_head=32 q_len=1 decode阶段\
 ![Local Image](./img/bs1_head32_d.png)\
-bs=4 num_head=32 q_len=1 decode阶段\
+4080 bs=4 num_head=32 q_len=1 decode阶段\
 ![Local Image](./img/bs4_head32_d.png)\
-bs=1 num_head=8 q_len=kv_len prefill阶段\
+4080 bs=1 num_head=8 q_len=kv_len prefill阶段\
 ![Local Image](./img/bs1_head8_p.png)\
-bs=4 num_head=32 q_len=kv_len prefill阶段\
+4080 bs=4 num_head=32 q_len=kv_len prefill阶段\
 ![Local Image](./img/bs4_head32_p.png)\
+A800 bs=1 num_head=32 q_len=1 decode阶段\
+![Local Image](./img/a800_bs1_head32_d.png)\
+A800 bs=32 num_head=32 q_len=1 decode阶段\
+![Local Image](./img/a800_bs32_head32_d.png)\
+A800 bs=1 num_head=32 q_len=kv_len prefill阶段\
+![Local Image](./img/a800_bs1_head32_p.png)\
+A800 bs=16 num_head=32 q_len=kv_len prefill阶段\
+![Local Image](./img/a800_bs16_head32_p.png)\
 
 # 4 精度问题
 精度损失其实还是挺大的，建议使用float16。设置fp32为golden标准，a是triton_mla的结果，b是torch_mla的结果(fp32)\
